@@ -20,7 +20,6 @@
     (println "| 1| 2| 3| 4| 5| 6| 7|")
     (println))
 
-
 (defn updateGrid [grid col player]
     (loop [lin 5]
         (if (>= lin 0)
