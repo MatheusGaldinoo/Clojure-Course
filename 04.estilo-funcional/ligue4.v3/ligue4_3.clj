@@ -1,112 +1,185 @@
-(defn changePlayer [player] (if (= player 1) 2 1))
+;; Connect Four - Functional Approach - Matheus Galdino 
 
-(defn findLine
-      ([col grade] (findLine 5 col grade))
-      ([i col grade]
-       (loop [i i]
-        (cond
-              (= i (- 1)) -1
-              (= (get (get grade i) col) 0) i
-              :else (recur (dec i))))))
+(defn printScoreboard [victories]
+    (println (str "| ScoreBoard: " (first victories) " X " (second victories) "  |"))
+    (println "----------------------"))
 
+(defn color [player]
+    (if (= player 1) "🟡"
+                     "🔴"))
 
-(defn newGrade [n lin col grade]
-               (assoc-in grade [lin col] n))
-
-(defn checkUpright [play row column grade]
-      (loop [sequen 0 l row]
-        (cond
-             (= l 6) sequen
-             (not= (get (get grade l) column) play) sequen
-             :else (recur (inc sequen) (inc l)))))
-
-(defn checkHorizontal [play row column grade]
-      (loop [c 0 sequen 0 columnPlay false]
-           (cond
-                (= c 7) -1
-                (and (= (+ sequen 1) 4) (or (true? columnPlay) (= c column))) 4
-                (and (= (get (get grade row) c) play) (= c columnPlay)) (recur (inc c) (inc sequen) true)
-                (= (get (get grade row) c) play) (recur (inc c) (inc sequen) columnPlay)
-                :else (recur (inc c) 0 false))))
-
-(defn findBaseDiagonal [row column operation isBaseRow queue]
-      (loop [i row j column]
+(defn printGrid [grid]
+    (doseq [lin (range 6)]
+        (doseq [col (range 7)]
             (cond
-                 (and (isBaseRow i) (> j 0))
-                      (recur (operation i) (dec j))
-                 (= queue "line") i
-                 (= queue "column") j
-      )))
+                (= 1 (get-in grid [lin col])) (print "|🟡")
+                (= 2 (get-in grid [lin col])) (print "|🔴")
+                :else (print "|  ")))
+        (println "|"))
+    (println "----------------------")
+    (println "| 1| 2| 3| 4| 5| 6| 7|")
+    (println))
 
-(defn checkDiagonal [play linePlay columnPlay grade slotRow
-                    slotColumn isBaseRow operation]
-      (loop [sequen 0 playHouse false slotRow slotRow slotColumn slotColumn]
-            (cond
-                  (or (not (isBaseRow slotRow)) (> slotColumn 6))
-                      (if (and (= sequen 4) (true? playHouse)) sequen -1)
-                  (and (and (= (get (get grade slotRow) slotColumn) play)
-                       (= slotRow linePlay)) (= slotColumn columnPlay))
-                       (recur (inc sequen) true (operation slotRow) (inc slotColumn))
-                  (= (get (get grade slotRow) slotColumn) play)
-                       (recur (inc sequen) playHouse (operation slotRow) (inc slotColumn))
-                  (and (= sequen 4) (true? playHouse)) sequen
-                  :else (recur 0 false (operation slotRow) (inc slotColumn)))))
 
-(defn checkMainDiagonal [play line column grade]
-      (checkDiagonal play line column grade
-      (findBaseDiagonal line column dec (fn [y] (> y 0)) "line")
-      (findBaseDiagonal line column dec (fn [y] (> y 0)) "column")
-      (fn [y] (<= y 5)) inc))
+(defn updateGrid [grid col player]
+    (loop [lin 5]
+        (if (>= lin 0)
+            (if (= 0 (get-in grid [lin col]))
+                [(assoc-in grid [lin col] player) lin]
+                (recur (dec lin)))
+            [-1 -1])))
 
-(defn checkSecondaryDiagonal [play line column grade]
-      (checkDiagonal play line column grade
-      (findBaseDiagonal line column inc (fn [y] (< y 5)) "line")
-      (findBaseDiagonal line column inc (fn [y] (< y 5)) "column")
-      (fn [y] (>= y 0)) dec))
+(defn isColValid [grid col]
+    (and (>= col 0) (< col 7) (= (get-in grid [0 col]) 0)))
 
-(defn checkWin [play line column grade]
+(defn checkLine [grid lin col player]
+  (let [checkLeft (loop [aux (dec col) count 0]
+                    (if (and (>= aux 0) (= player (get-in grid [lin aux])))
+                      (recur (dec aux) (inc count))
+                      count))
+        checkRight (loop [aux (inc col) count 0]
+                    (if (and (< aux 7) (= player (get-in grid [lin aux])))
+                      (recur (inc aux) (inc count))
+                      count))]
+    (+ checkLeft checkRight 1)))
+
+(defn checkColumn 
+    ([grid lin col player] (checkColumn grid lin col player 0))
+    ([grid lin col player count]
+        (if (and (< lin 6) (= player (get-in grid [lin col])))
+            (checkColumn grid (inc lin) col player (inc count))
+            count)))
+
+(defn checkDiagonal1 [grid lin col player]
+  (let [checkTopLeft (loop [aux 0 count 0]
+                       (if (and (>= (- lin aux) 0) (>= (- col aux) 0) 
+                                (= (get-in grid [(- lin aux) (- col aux)]) player))
+                         (recur (inc aux) (inc count))
+                         count))
+        checkBottomRight (loop [aux 1 count 0]
+                          (if (and (< (+ lin aux) 6) (< (+ col aux) 7) 
+                                   (= (get-in grid [(+ lin aux) (+ col aux)]) player))
+                            (recur (inc aux) (inc count)) 
+                            count))]
+    (+ checkTopLeft checkBottomRight)))
+
+(defn checkDiagonal2 [grid lin col player]
+  (let [checkBottomLeft (loop [aux 0 count 0]
+                          (if (and (< (+ lin aux) 6) (>= (- col aux) 0) 
+                                   (= (get-in grid [(+ lin aux) (- col aux)]) player))
+                            (recur (inc aux) (inc count))
+                            count))
+        checkTopRight (loop [aux 1 count 0]
+                       (if (and (>= (- lin aux) 0) (< (+ col aux) 7) 
+                                (= (get-in grid [(- lin aux) (+ col aux)]) player))
+                         (recur (inc aux) (inc count)) 
+                         count))]
+    (+ checkBottomLeft checkTopRight)))
+
+(defn hasWinner [grid lin col player]
+    (or (= 4 (checkLine grid lin col player)) 
+        (= 4 (checkColumn grid lin col player)) 
+        (= 4 (checkDiagonal1 grid lin col player)) 
+        (= 4 (checkDiagonal2 grid lin col player))))
+
+(defn addVictory [victories player]
+    (println (str "Player " player " wins!"))
+    (if (= player 1) [(inc (first victories)) (second victories)]
+        [(first victories) (inc (second victories))]))
+
+(defn isFull [grid]
+    (every? #(not= 0 %) (map #(get-in grid [0 %]) (range 7))))
+
+(defn changePlayer [player]
+    (if (= 1 player) 2 
+        1))
+
+(defn startRound [DEFAULT_GRID victories player]
+  (loop [grid (mapv vec DEFAULT_GRID) 
+         player player]
+
+    (println)
+    (printGrid grid)
+    
+    (println (str "Which column do you want to put " (color player) "? (1-7) or 0 for resignation: "))
+    (let [move (try
+                 (dec (Integer/parseInt (read-line)))
+                 (catch Exception e
+                   (println "INVALID MOVE!\n")
+                   -2))]
+
       (cond
-           (= (checkUpright play line column grade) 4) play
-           (= (checkHorizontal play line column grade) 4) play
-           (= (checkMainDiagonal play line column grade) 4) play
-           (= (checkSecondaryDiagonal play line column grade) 4) play
-           :else 0))
+        (or (< move -1) (> move 6) (and (>= move 0) (not (isColValid grid move))))
+          (do
+            (println "INVALID MOVE!\n")
+            (recur grid player))
 
-(defn main [] (loop [totalWins {:1 0 :2 0} setUpGame {:turn "s"}]
-                      (cond
-                            (= (get setUpGame :turn) "n") (println "Fim")
-                      :else (do
-                      (loop [continueGame "s" parcialWins {:1 0 :2 0} setUpTurn {:playerOfTurn 1 :playsDone 0 :grade (vec (repeat 6 (vec (repeat 7 0))))}]
-                      (cond
-                           (and (< (get setUpTurn :playsDone) 42) (not= continueGame "d"))
-                      (do (println "Jogar em que coluna? (1-7 / d): ")
-                      (def play (read-line))
-                      (if (= play "d") (recur play parcialWins setUpTurn)
-                      (do (let [p (Integer/parseInt play)] (when (and (re-find #"\d+" play) (and (pos? p) (< p 8)))
-                      (let [column (dec (Integer/parseInt play)) line (findLine column (get setUpTurn :grade))]
-                      (if (not= line -1)
-                      (do (def newPlaysDone (inc (get setUpTurn :playsDone))) (def grade (newGrade (get setUpTurn :playerOfTurn) line column (get setUpTurn :grade)))
-                      (doseq [row grade] (println row))
-                      (def score (checkWin (get setUpTurn :playerOfTurn) line column grade))
-                      (if (pos? score)
-                      (if (= score 1) (def newParcialWins (assoc parcialWins :1 (inc (get parcialWins :1))))
-                      (if (= score 2) (def newParcialWins (assoc parcialWins :2 (inc (get parcialWins :2)))))) (def newParcialWins parcialWins))
-                      ) (do (def newParcialWins parcialWins) (def newPlaysDone (get setUpTurn :playsDone))))
-                      )))
-                      (println (str "\nParcial: \nVitórias player 1: " (get newParcialWins :1)
-                                    "\nVitórias player 2: " (get newParcialWins :2)))
-                      (let [playerOfTurn (changePlayer (get setUpTurn :playerOfTurn))
-                            setUpTurn (assoc setUpTurn :playerOfTurn playerOfTurn :playsDone newPlaysDone :grade grade)]
-                      (recur "s" newParcialWins setUpTurn)))
-                      ))
-                      :else (do (println "\nFim do round.")
-                                (if (> (get parcialWins :1) (get parcialWins :2))
-                                (def newTotalWins (assoc totalWins :1 (inc (get totalWins :1))))
-                                (if (> (get parcialWins :2) (get parcialWins :1))
-                                (def newTotalWins (assoc totalWins :2 (inc (get totalWins :2))))
-                                (do (def newTotalWins totalWins) (println "\nEmpate")))))))
-                      (println (str "--------------------\n" "Vitórias totais jogador 1: " (get newTotalWins :1)
-                      "\nVitórias totais jogador 2: " (get newTotalWins :2)))
-                      (println "\nNova partida? (s / n) ") (let [newTurn (clojure.string/lower-case (read-line))
-                      setUpGame (assoc setUpGame :turn newTurn)] (recur newTotalWins setUpGame))))))
-(main)
+        (= move -1)
+          (do
+            (println)
+            (println (str "Player " player " resigned!"))
+            (addVictory victories (changePlayer player))
+            (println))
+
+        :else
+          (let [[newGrid lin] (updateGrid grid move player)]
+            (if (>= lin 0)
+              (cond
+                (hasWinner newGrid lin move player)
+                  (do
+                    (printGrid newGrid)
+                    (addVictory victories player))
+
+                (isFull newGrid)
+                  (do
+                    (printGrid newGrid)
+                    (println "Draw!\n")
+                    victories)
+
+                :else
+                  (recur newGrid (changePlayer player)))
+              (do
+                (println "Column is full! Choose another column.\n")
+                (recur grid player))))))))
+
+(defn startGame []
+    (loop [DEFAULT_GRID [[0 0 0 0 0 0 0]
+                         [0 0 0 0 0 0 0]
+                         [0 0 0 0 0 0 0]
+                         [0 0 0 0 0 0 0]
+                         [0 0 0 0 0 0 0]
+                         [0 0 0 0 0 0 0]]
+            victories [0 0]
+            continueGame true
+            player 1]
+
+        (if continueGame
+            (do
+                (println)
+                (printScoreboard victories)
+                (let [newVictories (startRound DEFAULT_GRID victories player)]
+                    (println "Do you want to keep playing? ('y' to continue / any other to quit): ")
+                    (if (not= "y" (read-line))
+                        (do
+                            (println "\nThe End!")
+                            (recur [[0 0 0 0 0 0 0]
+                                    [0 0 0 0 0 0 0]
+                                    [0 0 0 0 0 0 0]
+                                    [0 0 0 0 0 0 0]
+                                    [0 0 0 0 0 0 0]
+                                    [0 0 0 0 0 0 0]] 
+                            newVictories 
+                            false 
+                            1))
+
+                        (recur [[0 0 0 0 0 0 0]
+                                [0 0 0 0 0 0 0]
+                                [0 0 0 0 0 0 0]
+                                [0 0 0 0 0 0 0]
+                                [0 0 0 0 0 0 0]
+                                [0 0 0 0 0 0 0]] 
+                        newVictories 
+                        true 
+                        (changePlayer player))))))))
+
+(startGame)
