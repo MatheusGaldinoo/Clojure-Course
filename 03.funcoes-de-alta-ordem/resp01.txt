@@ -1,1 +1,2 @@
 Significa que a função pode ser tratada como um parametro, uma função, uma variavel, uma estrutura de dados ou um retorno.
+
