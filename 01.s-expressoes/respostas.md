@@ -1,5 +1,3 @@
-Matheuis Galdino de Souza - 123111147
-
 1. São listas de átomos ou de outras s-expressões. Átomos, por sua vez, podem ser equivalentes aos tipos primitvos de outras linguagens ou símbolos (funções, variáveis e operadores).
 
 2. "Matheus", true, 2.71828, 18, >.
@@ -22,7 +20,7 @@ Matheuis Galdino de Souza - 123111147
    (* 14 4 5)
    280
 
-7. Entre as especiais estão def (atribui um valor a um símbolo), fn (cria uma função), defn (fusão dos dois anteriores, define uma função ligando um nome a uma determinada sequencia de operações) e if (controla o fluxo do código, pois, quando se é usado, não se deseja que seja executado tudo).
+7. Entre as especiais estão: def (atribui um valor a um símbolo), fn (cria uma função), defn (fusão dos dois anteriores, define uma função ligando um nome a uma determinada sequencia de operações) e if (controla o fluxo do código, pois, quando se é usado, não se deseja que seja executado tudo).
 
 8. (vezes_12 10)
    (dobro (dobro (triplo 10)))
